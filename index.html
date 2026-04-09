@@ -953,7 +953,8 @@ async function init() {
       hideLoader();
       localStorage.removeItem('vibe_tok');
       console.error(e);
-      if (e.message !== '401') showToast('Error: ' + e.message);
+      // Always show the error so we can debug
+      alert('Error loading playlists: ' + e.message);
     }
   }
 }
