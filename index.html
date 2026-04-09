@@ -490,7 +490,7 @@ body {
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 const CLIENT_ID = '9f04234438d341199ab78a31e7a9527a';
-const REDIRECT_URI = location.href.split('?')[0].split('#')[0];
+const REDIRECT_URI = 'https://stevemon23.github.io/Vibe/';
 const SCOPES = 'playlist-read-private playlist-read-collaborative user-modify-playback-state user-read-playback-state streaming';
 
 // ── STATE ────────────────────────────────────────────────────
@@ -555,10 +555,35 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
-// ── AUTH (implicit) ──────────────────────────────────────────
-function connectSpotify() {
-  const url = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}`;
-  location.href = url;
+// ── AUTH (PKCE) ───────────────────────────────────────────────
+function rndStr(n) {
+  const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const arr = new Uint8Array(n);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, x => a[x % a.length]).join('');
+}
+async function pkceChallenge(v) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function connectSpotify() {
+  const verifier = rndStr(64);
+  const challenge = await pkceChallenge(verifier);
+  sessionStorage.setItem('pkce_v', verifier);
+  location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}&code_challenge_method=S256&code_challenge=${challenge}`;
+}
+async function getToken(code) {
+  const v = sessionStorage.getItem('pkce_v');
+  const r = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({client_id:CLIENT_ID, grant_type:'authorization_code', code, redirect_uri:REDIRECT_URI, code_verifier:v})
+  });
+  const d = await r.json();
+  if (!d.access_token) throw new Error(JSON.stringify(d));
+  token = d.access_token;
+  localStorage.setItem('vibe_tok', token);
+  localStorage.setItem('vibe_tok_t', Date.now());
 }
 
 // ── SPOTIFY API ──────────────────────────────────────────────
@@ -896,39 +921,39 @@ function showToast(msg) {
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
-  // Check for token in URL hash (implicit flow)
-  const hash = Object.fromEntries(
-    location.hash.slice(1).split('&')
-      .filter(p => p)
-      .map(p => p.split('='))
-  );
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
 
-  if (hash.access_token) {
-    token = hash.access_token;
-    localStorage.setItem('vibe_token', token);
-    localStorage.setItem('vibe_token_time', Date.now());
-    // Clean URL without losing the page
-    history.replaceState({}, '', location.pathname);
-  } else {
-    // Try saved token
-    const saved = localStorage.getItem('vibe_token');
-    const savedTime = parseInt(localStorage.getItem('vibe_token_time') || '0');
-    if (saved && (Date.now() - savedTime) < 3500000) {
-      token = saved;
+  if (code) {
+    // Got code back from Spotify — clean URL first, then exchange
+    history.replaceState({}, '', REDIRECT_URI);
+    showLoader('Signing in…'); setLoaderPct(20);
+    try {
+      await getToken(code);
+      setLoaderPct(60);
+    } catch(e) {
+      hideLoader();
+      showToast('Sign in failed. Tap Connect and try again.');
+      console.error(e);
+      return;
     }
+  } else {
+    const t = localStorage.getItem('vibe_tok');
+    const ts = parseInt(localStorage.getItem('vibe_tok_t') || '0');
+    if (t && (Date.now() - ts) < 3500000) token = t;
   }
 
   if (token) {
-    showLoader('Loading your playlists…'); setLoaderPct(10);
+    showLoader('Loading your playlists…'); setLoaderPct(70);
     try {
       allPlaylists = await fetchAllPlaylists();
       setLoaderPct(100);
       setTimeout(() => { hideLoader(); renderPlaylists(); showScreen('s-playlists'); }, 400);
     } catch(e) {
       hideLoader();
-      console.error('Playlist load error:', e);
-      localStorage.removeItem('vibe_token');
-      if (e.message !== '401') showToast('Could not load playlists: ' + e.message);
+      localStorage.removeItem('vibe_tok');
+      console.error(e);
+      if (e.message !== '401') showToast('Error: ' + e.message);
     }
   }
 }
