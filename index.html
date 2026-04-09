@@ -277,7 +277,7 @@ function renderPlaylists() {
     div.className='pl-item fade-up'; div.style.animationDelay=i*0.04+'s';
     const img=pl.images?.[0]?.url;
     const isSp=pl.owner?.id==='spotify';
-    div.innerHTML=`<div class="pl-img">${img?`<img src="${img}" alt="">`:(isSp?'⭐':'🎵')}</div><div class="pl-info"><div class="pl-name">${pl.name}</div><div class="pl-meta">${pl.tracks.total} songs${isSp?' · By Spotify':''}</div></div><div class="pl-check"></div>`;
+    div.innerHTML=`<div class="pl-img">${img?`<img src="${img}" alt="">`:(isSp?'⭐':'🎵')}</div><div class="pl-info"><div class="pl-name">${pl.name}</div><div class="pl-meta">${pl.tracks?.total||'?'} songs${isSp?' · By Spotify':''}</div></div><div class="pl-check"></div>`;
     div.onclick=()=>{
       if(selectedIds.has(pl.id)){selectedIds.delete(pl.id);div.classList.remove('selected');}
       else{selectedIds.add(pl.id);div.classList.add('selected');}
@@ -454,7 +454,6 @@ async function init() {
     showLoader('Signing in to Spotify…', 20);
     try {
       await exchangeToken(code);
-      alert('Token exchange SUCCESS! Token starts with: ' + token.slice(0,15));
     } catch(e) {
       hideLoader();
       alert('Token exchange FAILED: ' + e.message);
@@ -476,13 +475,13 @@ async function init() {
     showLoader('Loading your playlists…', 50);
     try {
       allPlaylists = await loadPlaylists();
-      alert('Got ' + allPlaylists.length + ' playlists! Rendering now...');
       renderPlaylists();
       show('s-playlists');
       hideLoader();
     } catch(e) {
       hideLoader();
-      alert('FAILED: ' + e.message + ' | stack: ' + (e.stack||'').slice(0,100));
+      showToast('Error: ' + e.message);
+      console.error(e);
     }
   }
 }
