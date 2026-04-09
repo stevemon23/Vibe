@@ -1,2 +1,2 @@
 # Vibe
-Pick your Vibe from any playlist on Spotify 
+Pick your Vibe from any or all playlists on Spotify 
