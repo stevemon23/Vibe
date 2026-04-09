@@ -476,11 +476,13 @@ async function init() {
     showLoader('Loading your playlists…', 50);
     try {
       allPlaylists = await loadPlaylists();
-      setLoader('Ready!', 100);
-      setTimeout(() => { hideLoader(); renderPlaylists(); show('s-playlists'); }, 400);
+      alert('Got ' + allPlaylists.length + ' playlists! Rendering now...');
+      renderPlaylists();
+      show('s-playlists');
+      hideLoader();
     } catch(e) {
       hideLoader();
-      alert('Playlist load FAILED: ' + e.message);
+      alert('FAILED: ' + e.message + ' | stack: ' + (e.stack||'').slice(0,100));
     }
   }
 }
