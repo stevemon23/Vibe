@@ -942,15 +942,24 @@ function showToast(msg) {
 async function init() {
   const params = new URLSearchParams(location.search);
   const code = params.get('code');
+  const error = params.get('error');
+
+  if (error) {
+    history.replaceState({}, '', location.pathname);
+    showToast('Spotify login cancelled.');
+    return;
+  }
 
   if (code) {
     history.replaceState({}, '', location.pathname);
     showLoader('Connecting to Spotify…'); setLoaderPct(10);
     try {
       await exchangeCode(code);
+      setLoaderPct(50);
     } catch(e) {
       hideLoader();
-      showToast('Auth failed — please try connecting again.');
+      console.error('Exchange error:', e);
+      showToast('Login failed — tap Connect and try again.');
       return;
     }
   } else {
@@ -962,14 +971,15 @@ async function init() {
   }
 
   if (token) {
-    showLoader('Loading your playlists…'); setLoaderPct(10);
+    showLoader('Loading your playlists…'); setLoaderPct(60);
     try {
       allPlaylists = await fetchAllPlaylists();
       setLoaderPct(100);
-      setTimeout(() => { hideLoader(); renderPlaylists(); showScreen('s-playlists'); }, 300);
+      setTimeout(() => { hideLoader(); renderPlaylists(); showScreen('s-playlists'); }, 400);
     } catch(e) {
       hideLoader();
-      if (e.message !== '401') showToast('Could not load playlists.');
+      console.error('Playlist load error:', e);
+      if (e.message !== '401') showToast('Could not load playlists: ' + e.message);
     }
   }
 }
