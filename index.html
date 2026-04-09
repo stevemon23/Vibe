@@ -290,27 +290,18 @@ function renderPlaylists() {
 
 // TRACKS
 async function fetchTracks(pid) {
-  let items=[];
+  let items = [];
   try {
-    // Try direct playlist endpoint first
-    const r = await fetch(`https://api.spotify.com/v1/playlists/${pid}`, {
-      headers:{Authorization:'Bearer '+token}
-    });
-    const d = await r.json();
-    alert('Playlist fetch status: '+r.status+' | name: '+(d.name||'unknown')+' | tracks: '+(d.tracks?.total||0)+' | error: '+(d.error?.message||'none'));
-    
-    if (r.ok && d.tracks?.items) {
-      items = d.tracks.items.filter(i=>i.track?.id);
-      let next = d.tracks.next;
-      while(next) {
-        const r2 = await fetch(next, {headers:{Authorization:'Bearer '+token}});
-        const d2 = await r2.json();
-        items = items.concat(d2.items.filter(i=>i.track?.id));
-        next = d2.next;
-      }
+    let url = `https://api.spotify.com/v1/playlists/${pid}/tracks?limit=100`;
+    while(url) {
+      const r = await fetch(url, {headers:{Authorization:'Bearer '+token}});
+      const d = await r.json();
+      if (!r.ok) { console.warn('tracks error '+r.status+': '+d.error?.message); break; }
+      items = items.concat(d.items.filter(i=>i.track?.id));
+      url = d.next;
     }
   } catch(e) {
-    alert('fetchTracks exception: '+e.message);
+    console.warn('fetchTracks error: '+e.message);
   }
   return items;
 }
@@ -319,13 +310,10 @@ async function loadSelectedPlaylists() {
   showLoader('Loading tracks…', 5);
   try {
     let raw=[];
-    // Force test with hardcoded public playlist
-    const pids = selectedIds.size > 0 ? [...selectedIds] : ['3t5CBsBespfTqYNkuDn1pW'];
+    const pids = [...selectedIds];
     for(let i=0;i<pids.length;i++){
       setLoader(`Loading playlist ${i+1} of ${pids.length}…`, 5+(i/pids.length)*30);
-      const tracks = await fetchTracks(pids[i]);
-      showToast(`Playlist ${i+1}: got ${tracks.length} tracks`);
-      raw=raw.concat(tracks);
+      raw=raw.concat(await fetchTracks(pids[i]));
     }
     const seen=new Set();
     raw=raw.filter(t=>{if(seen.has(t.track.id))return false;seen.add(t.track.id);return true;});
