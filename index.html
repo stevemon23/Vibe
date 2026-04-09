@@ -569,11 +569,11 @@ async function pkceChallenge(v) {
 async function connectSpotify() {
   const verifier = rndStr(64);
   const challenge = await pkceChallenge(verifier);
-  sessionStorage.setItem('pkce_v', verifier);
+  localStorage.setItem('pkce_v', verifier);
   location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}&code_challenge_method=S256&code_challenge=${challenge}`;
 }
 async function getToken(code) {
-  const v = sessionStorage.getItem('pkce_v');
+  const v = localStorage.getItem('pkce_v');
   const r = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
     headers: {'Content-Type':'application/x-www-form-urlencoded'},
