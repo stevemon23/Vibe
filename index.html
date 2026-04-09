@@ -290,11 +290,16 @@ function renderPlaylists() {
 
 // TRACKS
 async function fetchTracks(pid) {
-  let items=[], url=`https://api.spotify.com/v1/playlists/${pid}/tracks?limit=50&fields=next,items(track(id,name,uri,duration_ms,album(images),artists(id,name)))`;
+  let items=[], url=`https://api.spotify.com/v1/playlists/${pid}/tracks?limit=50`;
   try {
-    while(url){const d=await api(url);items=items.concat(d.items.filter(i=>i.track?.id));url=d.next;}
+    while(url){
+      const d=await api(url);
+      items=items.concat(d.items.filter(i=>i.track?.id));
+      url=d.next;
+    }
   } catch(e) {
     console.warn('Skipping playlist '+pid+': '+e.message);
+    showToast('Skipped a playlist: '+e.message);
   }
   return items;
 }
