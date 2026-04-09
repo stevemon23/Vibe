@@ -307,10 +307,13 @@ async function loadSelectedPlaylists() {
   showLoader('Loading tracks…', 5);
   try {
     let raw=[];
-    const pids=[...selectedIds];
+    // Force test with hardcoded public playlist
+    const pids = selectedIds.size > 0 ? [...selectedIds] : ['3t5CBsBespfTqYNkuDn1pW'];
     for(let i=0;i<pids.length;i++){
       setLoader(`Loading playlist ${i+1} of ${pids.length}…`, 5+(i/pids.length)*30);
-      raw=raw.concat(await fetchTracks(pids[i]));
+      const tracks = await fetchTracks(pids[i]);
+      showToast(`Playlist ${i+1}: got ${tracks.length} tracks`);
+      raw=raw.concat(tracks);
     }
     const seen=new Set();
     raw=raw.filter(t=>{if(seen.has(t.track.id))return false;seen.add(t.track.id);return true;});
