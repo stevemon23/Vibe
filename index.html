@@ -292,14 +292,20 @@ function renderPlaylists() {
 async function fetchTracks(pid) {
   let items=[], url=`https://api.spotify.com/v1/playlists/${pid}/tracks?limit=50`;
   try {
+    const r = await fetch(url, {headers:{Authorization:'Bearer '+token}});
+    const text = await r.text();
+    alert('Playlist '+pid.slice(0,8)+' status: '+r.status+' | response: '+text.slice(0,200));
+    if (!r.ok) return [];
+    const d = JSON.parse(text);
+    items = d.items.filter(i=>i.track?.id);
+    url = d.next;
     while(url){
-      const d=await api(url);
-      items=items.concat(d.items.filter(i=>i.track?.id));
-      url=d.next;
+      const d2=await api(url);
+      items=items.concat(d2.items.filter(i=>i.track?.id));
+      url=d2.next;
     }
   } catch(e) {
-    console.warn('Skipping playlist '+pid+': '+e.message);
-    showToast('Skipped a playlist: '+e.message);
+    alert('fetchTracks error: '+e.message);
   }
   return items;
 }
