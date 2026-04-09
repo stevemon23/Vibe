@@ -290,15 +290,27 @@ function renderPlaylists() {
 
 // TRACKS
 async function fetchTracks(pid) {
-  let items=[], url=`https://api.spotify.com/v1/playlists/${pid}/tracks?limit=50`;
+  let items=[];
   try {
-    while(url){
-      const d=await api(url);
-      items=items.concat(d.items.filter(i=>i.track?.id));
-      url=d.next;
+    // Try direct playlist endpoint first
+    const r = await fetch(`https://api.spotify.com/v1/playlists/${pid}`, {
+      headers:{Authorization:'Bearer '+token}
+    });
+    const d = await r.json();
+    alert('Playlist fetch status: '+r.status+' | name: '+(d.name||'unknown')+' | tracks: '+(d.tracks?.total||0)+' | error: '+(d.error?.message||'none'));
+    
+    if (r.ok && d.tracks?.items) {
+      items = d.tracks.items.filter(i=>i.track?.id);
+      let next = d.tracks.next;
+      while(next) {
+        const r2 = await fetch(next, {headers:{Authorization:'Bearer '+token}});
+        const d2 = await r2.json();
+        items = items.concat(d2.items.filter(i=>i.track?.id));
+        next = d2.next;
+      }
     }
   } catch(e) {
-    console.warn('Skipping playlist '+pid+': '+e.message);
+    alert('fetchTracks exception: '+e.message);
   }
   return items;
 }
