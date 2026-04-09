@@ -436,9 +436,16 @@ async function init() {
   const code = params.get('code');
   const error = params.get('error');
 
+  // Show everything on screen for debugging
+  const urlInfo = 'URL: ' + location.href.slice(0,80) + 
+    ' | code: ' + (code ? code.slice(0,15)+'...' : 'none') +
+    ' | verifier: ' + (localStorage.getItem('vibe_v') ? 'YES' : 'NO') +
+    ' | saved_tok: ' + (localStorage.getItem('vibe_tok') ? 'YES' : 'NO');
+  console.log(urlInfo);
+
   if (error) {
     history.replaceState({}, '', REDIRECT_URI);
-    showToast('Spotify login was cancelled.');
+    alert('Spotify error: ' + error);
     return;
   }
 
@@ -447,15 +454,22 @@ async function init() {
     showLoader('Signing in to Spotify…', 20);
     try {
       await exchangeToken(code);
+      alert('Token exchange SUCCESS! Token starts with: ' + token.slice(0,15));
     } catch(e) {
       hideLoader();
-      showToast('Sign in failed: ' + e.message);
+      alert('Token exchange FAILED: ' + e.message);
       return;
     }
   } else {
     const t = localStorage.getItem('vibe_tok');
     const ts = parseInt(localStorage.getItem('vibe_tok_t') || '0');
-    if (t && (Date.now() - ts) < 3500000) token = t;
+    if (t && (Date.now() - ts) < 3500000) { 
+      token = t;
+      console.log('Using saved token');
+    } else {
+      console.log('No valid saved token, showing connect screen');
+      return;
+    }
   }
 
   if (token) {
@@ -466,7 +480,7 @@ async function init() {
       setTimeout(() => { hideLoader(); renderPlaylists(); show('s-playlists'); }, 400);
     } catch(e) {
       hideLoader();
-      if (e.message !== '401') showToast('Could not load playlists: ' + e.message);
+      alert('Playlist load FAILED: ' + e.message);
     }
   }
 }
