@@ -277,7 +277,7 @@ function renderPlaylists() {
     div.className='pl-item fade-up'; div.style.animationDelay=i*0.04+'s';
     const img=pl.images?.[0]?.url;
     const isSp=pl.owner?.id==='spotify';
-    div.innerHTML=`<div class="pl-img">${img?`<img src="${img}" alt="">`:(isSp?'⭐':'🎵')}</div><div class="pl-info"><div class="pl-name">${pl.name}</div><div class="pl-meta">${pl.tracks?.total||'?'} songs${isSp?' · By Spotify':''}</div></div><div class="pl-check"></div>`;
+    div.innerHTML=`<div class="pl-img">${img?`<img src="${img}" alt="">`:(isSp?'⭐':'🎵')}</div><div class="pl-info"><div class="pl-name">${pl.name}</div><div class="pl-meta">${pl.tracks?.total||'~'} songs${isSp?' · By Spotify':''}</div></div><div class="pl-check"></div>`;
     div.onclick=()=>{
       if(selectedIds.has(pl.id)){selectedIds.delete(pl.id);div.classList.remove('selected');}
       else{selectedIds.add(pl.id);div.classList.add('selected');}
@@ -291,7 +291,11 @@ function renderPlaylists() {
 // TRACKS
 async function fetchTracks(pid) {
   let items=[], url=`https://api.spotify.com/v1/playlists/${pid}/tracks?limit=50&fields=next,items(track(id,name,uri,duration_ms,album(images),artists(id,name)))`;
-  while(url){const d=await api(url);items=items.concat(d.items.filter(i=>i.track?.id));url=d.next;}
+  try {
+    while(url){const d=await api(url);items=items.concat(d.items.filter(i=>i.track?.id));url=d.next;}
+  } catch(e) {
+    console.warn('Skipping playlist '+pid+': '+e.message);
+  }
   return items;
 }
 
