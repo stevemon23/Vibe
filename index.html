@@ -126,8 +126,11 @@ body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-se
 
   <div id="s-playlists" class="screen">
     <div class="app-header"><div class="logo">VIB<span>E</span></div><div class="tagline">What's your vibe?</div></div>
-    <div class="scroll"><span class="sec-label">Choose your playlists</span><div id="pl-list"></div></div>
-    <div class="bottom-bar"><button class="btn-load" id="load-btn" onclick="loadSelectedPlaylists()" disabled>Select playlists to continue</button></div>
+    <div class="scroll">
+      <span class="sec-label">Your music</span>
+      <div id="pl-list"></div>
+    </div>
+    <div class="bottom-bar"><button class="btn-load" id="load-btn" onclick="loadSelectedPlaylists()">Load My Music →</button></div>
   </div>
 
   <div id="s-genres" class="screen">
@@ -272,17 +275,19 @@ async function loadPlaylists() {
 
 function renderPlaylists() {
   const c=document.getElementById('pl-list'); c.innerHTML='';
-  allPlaylists.forEach((pl,i)=>{
+  const options = [
+    { id:'short_term', label:'Recent Favorites', desc:'Your top songs from the last 4 weeks', icon:'🔥' },
+    { id:'medium_term', label:'Last 6 Months', desc:'Your top songs from the last 6 months', icon:'⚡' },
+    { id:'long_term', label:'All Time', desc:'Your top songs of all time', icon:'👑' },
+  ];
+  options.forEach((o,i)=>{
     const div=document.createElement('div');
-    div.className='pl-item fade-up'; div.style.animationDelay=i*0.04+'s';
-    const img=pl.images?.[0]?.url;
-    const isSp=pl.owner?.id==='spotify';
-    div.innerHTML=`<div class="pl-img">${img?`<img src="${img}" alt="">`:(isSp?'⭐':'🎵')}</div><div class="pl-info"><div class="pl-name">${pl.name}</div><div class="pl-meta">${pl.tracks?.total||'~'} songs${isSp?' · By Spotify':''}</div></div><div class="pl-check"></div>`;
+    div.className='pl-item fade-up'; div.style.animationDelay=i*0.1+'s';
+    div.innerHTML=`<div class="pl-img">${o.icon}</div><div class="pl-info"><div class="pl-name">${o.label}</div><div class="pl-meta">${o.desc}</div></div><div class="pl-check"></div>`;
     div.onclick=()=>{
-      if(selectedIds.has(pl.id)){selectedIds.delete(pl.id);div.classList.remove('selected');}
-      else{selectedIds.add(pl.id);div.classList.add('selected');}
-      const n=selectedIds.size, btn=document.getElementById('load-btn');
-      btn.disabled=n===0; btn.textContent=n===0?'Select playlists to continue':`Load ${n} playlist${n>1?'s':''} →`;
+      document.querySelectorAll('.pl-item').forEach(el=>{ el.classList.remove('selected'); });
+      div.classList.add('selected');
+      selectedIds.clear(); selectedIds.add(o.id);
     };
     c.appendChild(div);
   });
@@ -494,17 +499,8 @@ async function init() {
   }
 
   if (token) {
-    showLoader('Loading your playlists…', 50);
-    try {
-      allPlaylists = await loadPlaylists();
-      renderPlaylists();
-      show('s-playlists');
-      hideLoader();
-    } catch(e) {
-      hideLoader();
-      showToast('Error: ' + e.message);
-      console.error(e);
-    }
+    renderPlaylists();
+    show('s-playlists');
   }
 }
 
