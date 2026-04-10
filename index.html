@@ -175,7 +175,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-se
 <script>
 const CLIENT_ID = '9f04234438d341199ab78a31e7a9527a';
 const REDIRECT_URI = 'https://stevemon23.github.io/Vibe/';
-const SCOPES = 'playlist-read-private playlist-read-collaborative user-read-private user-library-read user-modify-playback-state user-read-playback-state';
+const SCOPES = 'playlist-read-private playlist-read-collaborative user-read-private user-library-read user-top-read user-modify-playback-state user-read-playback-state';
 
 let token = null, allPlaylists = [], selectedIds = new Set(), allTracks = [], activeGenre = 'All', genreMap = {}, queue = [], qIdx = 0, playing = false, progInterval = null, tStart = 0, tDur = 0;
 
@@ -520,5 +520,7 @@ async function init() {
 
 init();
 </script>
+</body>
+</html>
 </body>
 </html>
