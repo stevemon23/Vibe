@@ -292,14 +292,25 @@ function renderPlaylists() {
 async function fetchTracks(pid) {
   let items = [];
   try {
-    let url = `https://api.spotify.com/v1/playlists/${pid}/tracks?limit=100`;
-    while(url) {
-      const r = await fetch(url, {headers:{Authorization:'Bearer '+token}});
-      const d = await r.json();
-      if (!r.ok) { console.warn('tracks error '+r.status+': '+d.error?.message); break; }
-      items = items.concat(d.items.filter(i=>i.track?.id));
-      url = d.next;
+    // Use playlist endpoint with no field filtering
+    const r = await fetch(`https://api.spotify.com/v1/playlists/${pid}`, {
+      headers:{Authorization:'Bearer '+token}
+    });
+    const d = await r.json();
+    if (!r.ok) { console.warn('playlist error: '+d.error?.message); return []; }
+    
+    const rawItems = d.tracks?.items||[];
+    alert('Total items: '+rawItems.length+' | first item keys: '+JSON.stringify(Object.keys(rawItems[0]||{}))+' | first track keys: '+JSON.stringify(Object.keys(rawItems[0]?.track||{})));
+    items = rawItems.filter(i=>i.track?.id);
+    let next = d.tracks?.next;
+    while(next) {
+      const r2 = await fetch(next, {headers:{Authorization:'Bearer '+token}});
+      const d2 = await r2.json();
+      if (!r2.ok) break;
+      items = items.concat(d2.items.filter(i=>i.track?.id));
+      next = d2.next;
     }
+    showToast(`Loaded ${items.length} tracks`);
   } catch(e) {
     console.warn('fetchTracks error: '+e.message);
   }
