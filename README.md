@@ -1,2 +1,2 @@
 # Vibe
-Pick your Vibe from yout top 500 songs 
+Pick your Vibe from your top 500 songs 
