@@ -259,7 +259,8 @@ async function exchangeToken(code) {
 
 // API
 async function api(url) {
-  const r = await fetch(url, {headers:{Authorization:'Bearer '+token}});
+  const fullUrl = url.startsWith('http') ? url : 'https://api.spotify.com/'+url;
+  const r = await fetch(fullUrl, {headers:{Authorization:'Bearer '+token}});
   if (r.status===401) { token=null; localStorage.removeItem('vibe_tok'); show('s-connect'); throw new Error('401'); }
   if (!r.ok) throw new Error('API '+r.status);
   return r.json();
@@ -323,29 +324,32 @@ async function fetchTracks(pid) {
 }
 
 async function loadSelectedPlaylists() {
-  showLoader('Loading tracks…', 5);
+  if(!selectedIds.size){ showToast('Pick a time range first!'); return; }
+  const timeRange = [...selectedIds][0];
+  showLoader('Loading your top tracks…', 5);
   try {
-    let raw=[];
-    const pids = [...selectedIds];
-    for(let i=0;i<pids.length;i++){
-      setLoader(`Loading playlist ${i+1} of ${pids.length}…`, 5+(i/pids.length)*30);
-      raw=raw.concat(await fetchTracks(pids[i]));
+    // Fetch top tracks exactly like Spotify's own example
+    let raw = [];
+    for(let offset=0; offset<500; offset+=50){
+      setLoader(`Loading tracks… ${Math.min(offset+50,500)}/500`, 5+(offset/500)*35);
+      const d = await api(`v1/me/top/tracks?time_range=${timeRange}&limit=50&offset=${offset}`);
+      if(!d.items?.length) break;
+      raw = raw.concat(d.items);
     }
-    const seen=new Set();
-    raw=raw.filter(t=>{if(seen.has(t.track.id))return false;seen.add(t.track.id);return true;});
-    setLoader(`${raw.length} tracks — loading genres…`, 35);
 
-    const aids=[...new Set(raw.flatMap(i=>i.track.artists.map(a=>a.id)))];
+    setLoader(`Got ${raw.length} tracks — loading genres…`, 40);
+
+    const aids=[...new Set(raw.flatMap(t=>t.artists.map(a=>a.id)))];
     const gmap={};
     for(let i=0;i<aids.length;i+=50){
-      setLoader(`Genres… ${Math.min(i+50,aids.length)}/${aids.length}`, 35+(i/aids.length)*60);
-      const d=await api(`https://api.spotify.com/v1/artists?ids=${aids.slice(i,i+50).join(',')}`);
+      setLoader(`Loading genres… ${Math.min(i+50,aids.length)}/${aids.length}`, 40+(i/aids.length)*55);
+      const d=await api(`v1/artists?ids=${aids.slice(i,i+50).join(',')}`);
       d.artists.forEach(a=>{if(a)gmap[a.id]=a.genres||[];});
     }
 
-    allTracks=raw.map(item=>({
-      ...item,
-      genres:[...new Set(item.track.artists.flatMap(a=>gmap[a.id]||[]))],
+    allTracks=raw.map(track=>({
+      track,
+      genres:[...new Set(track.artists.flatMap(a=>gmap[a.id]||[]))],
       simplified:[]
     }));
 
